@@ -21,6 +21,13 @@ curl -i localhost:8000/health
 curl -s localhost:8000/ready
 ```
 
+Or in a container:
+
+```bash
+docker compose up --build
+curl -i localhost:8000/health
+```
+
 `uv run pytest` runs the suite with a 70% coverage gate.
 `uv run ruff check src tests` lints.
 
@@ -69,7 +76,7 @@ register_readiness_check("vector_store", check_vector_store)
 | Session | Adds |
 |---|---|
 | 1 ✅ | Config, logging, correlation ids, probes, app factory, tests |
-| 2 | Dockerfile + compose |
+| 2 ✅ | Multi-stage Dockerfile, compose, non-root, read-only runtime |
 | 3 | CI pipeline with lint, type check, coverage gate, security scan |
 | 4 | OpenTelemetry, error handler, guardrail middleware slots |
 | 5 | Evaluation harness interface + fixtures |
