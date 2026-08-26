@@ -41,7 +41,11 @@ curl -i localhost:8000/health
 | **Probes** | `/health` (liveness, checks nothing) and `/ready` (readiness, checks registered dependencies). |
 | **API versioning** | `/v1` router present and empty from day one. |
 | **Tests** | pytest with an app factory fixture and an enforced coverage floor. |
-| **ADRs** | `docs/adr/` with a template and the five decisions above. |
+| **Tracing** | OpenTelemetry over OTLP, vendor-neutral. Trace and span ids on every log line. No-op without a collector. |
+| **Errors** | RFC 9457 problem+json on every path, always carrying the correlation id. No exception text in production. |
+| **Guardrails** | `Guardrail` / `GuardrailChain` contract with no implementations — policy is per-service. |
+| **Evaluation** | Harness, content-hashed golden sets, absolute + regression thresholds, text and JSON reports. No metrics — policy is per-service. |
+| **ADRs** | `docs/adr/` with a template and eleven recorded decisions. |
 
 ## Building a service from this
 
@@ -58,16 +62,29 @@ async def check_vector_store() -> None:
 register_readiness_check("vector_store", check_vector_store)
 ```
 
-4. Write an ADR for anything you decide that the next person would otherwise
+4. Define your evaluators and your Production Quality Bar:
+
+```python
+from evals import Gate, Threshold, load_jsonl, run_eval
+
+run = await run_eval(load_jsonl("evals/cases/golden.jsonl"), my_target, [Groundedness()])
+gate = Gate(
+    thresholds=(Threshold("groundedness", min_mean=0.85, min_pass_rate=0.95),),
+    max_p95_latency_ms=2000,
+)
+result = gate.evaluate(run, baseline=last_accepted_run)
+```
+
+5. Write an ADR for anything you decide that the next person would otherwise
    have to guess at.
 
 ## What is deliberately not here
 
 - **Any AI code.** Retrieval, agents, prompts and model clients belong to the
   services, not the template.
-- **Evaluation metrics.** The harness interface arrives in session 5; the
-  metrics are pattern-specific — groundedness for retrieval, task success for
-  agents — so the template ships the interface and no implementations.
+- **Evaluation metrics.** The harness is here; the metrics are not. Groundedness
+  is for retrieval, task success for agents — so the template ships the contract
+  and no implementations. `python -m evals` exits 1 until you write one.
 - **Guardrail implementations.** The middleware slots arrive in session 4.
   PII redaction and injection detection are per-service policy.
 
@@ -77,8 +94,8 @@ register_readiness_check("vector_store", check_vector_store)
 |---|---|
 | 1 ✅ | Config, logging, correlation ids, probes, app factory, tests |
 | 2 ✅ | Multi-stage Dockerfile, compose, non-root, read-only runtime |
-| 3 | CI pipeline with lint, type check, coverage gate, security scan |
-| 4 | OpenTelemetry, error handler, guardrail middleware slots |
-| 5 | Evaluation harness interface + fixtures |
+| 3 ✅ | CI pipeline with lint, type check, coverage gate, security scan |
+| 4 ✅ | OpenTelemetry tracing, RFC 9457 error contract, guardrail interfaces |
+| 5 ✅ | Evaluation harness, golden-set loader, threshold gate, reporters |
 
 

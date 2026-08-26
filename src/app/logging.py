@@ -22,6 +22,8 @@ from contextvars import ContextVar
 from datetime import UTC, datetime
 from typing import Any
 
+from opentelemetry import trace
+
 from app.config import Settings
 
 # A ContextVar rather than a global: asyncio tasks each get their own value, so
@@ -47,6 +49,13 @@ def _install_record_factory() -> None:
     def factory(*args: Any, **kwargs: Any) -> logging.LogRecord:
         record = _BASE_RECORD_FACTORY(*args, **kwargs)
         record.correlation_id = correlation_id.get()
+        # The trace id is what an observability backend indexes on. Putting it
+        # on the log line is what turns "here is an error" into "here is the
+        # exact request that produced it, and every hop it made".
+        span_context = trace.get_current_span().get_span_context()
+        if span_context.is_valid:
+            record.trace_id = format(span_context.trace_id, "032x")
+            record.span_id = format(span_context.span_id, "016x")
         return record
 
     logging.setLogRecordFactory(factory)
@@ -61,8 +70,10 @@ _LOGRECORD_BUILTINS = set(logging.LogRecord("", 0, "", 0, "", None, None).__dict
     # uvicorn attaches an ANSI-coloured copy of its own message. Useful in a
     # terminal, noise in a log aggregator.
     "color_message",
-    # promoted to a first-class field, not an extra
+    # promoted to first-class fields, not extras
     "correlation_id",
+    "trace_id",
+    "span_id",
 }
 
 
@@ -82,6 +93,8 @@ class JsonFormatter(logging.Formatter):
             "logger": record.name,
             "message": record.getMessage(),
             "correlation_id": getattr(record, "correlation_id", "-"),
+            "trace_id": getattr(record, "trace_id", "-"),
+            "span_id": getattr(record, "span_id", "-"),
             **self._base,
         }
         for key, value in record.__dict__.items():
