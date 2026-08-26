@@ -18,8 +18,10 @@ from fastapi import FastAPI
 from app.api import health
 from app.api.v1 import router as v1_router
 from app.config import Settings, get_settings
+from app.errors import register_exception_handlers
 from app.logging import configure_logging
 from app.middleware import CorrelationIdMiddleware
+from app.telemetry import configure_tracing
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +53,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     )
 
     app.add_middleware(CorrelationIdMiddleware)
+    register_exception_handlers(app, settings)
+
+    # Instrumented last, so the tracing middleware sits outermost and its span
+    # covers the correlation-id middleware and the exception handlers rather
+    # than being nested inside them.
+    configure_tracing(app, settings)
 
     # Operational endpoints are deliberately unversioned: probes are configured
     # by the platform, not by API consumers, and must not move between versions.

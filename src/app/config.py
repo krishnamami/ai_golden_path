@@ -43,12 +43,21 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     log_format: Literal["json", "console"] = "json"
 
+    # Tracing is off unless an endpoint is configured. A template that crashes
+    # on a laptop because no collector is running would simply be deleted.
+    otlp_endpoint: str | None = None
+    trace_sample_ratio: float = Field(default=1.0, ge=0.0, le=1.0)
+
     # --- behaviour --------------------------------------------------------
     request_timeout_seconds: float = Field(default=30.0, gt=0)
 
     @property
     def is_production(self) -> bool:
         return self.environment == "prod"
+
+    @property
+    def tracing_enabled(self) -> bool:
+        return self.otlp_endpoint is not None
 
     @model_validator(mode="after")
     def _enforce_environment_policy(self) -> Settings:

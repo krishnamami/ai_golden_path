@@ -41,7 +41,10 @@ curl -i localhost:8000/health
 | **Probes** | `/health` (liveness, checks nothing) and `/ready` (readiness, checks registered dependencies). |
 | **API versioning** | `/v1` router present and empty from day one. |
 | **Tests** | pytest with an app factory fixture and an enforced coverage floor. |
-| **ADRs** | `docs/adr/` with a template and the five decisions above. |
+| **Tracing** | OpenTelemetry over OTLP, vendor-neutral. Trace and span ids on every log line. No-op without a collector. |
+| **Errors** | RFC 9457 problem+json on every path, always carrying the correlation id. No exception text in production. |
+| **Guardrails** | `Guardrail` / `GuardrailChain` contract with no implementations — policy is per-service. |
+| **ADRs** | `docs/adr/` with a template and ten recorded decisions. |
 
 ## Building a service from this
 
@@ -77,8 +80,8 @@ register_readiness_check("vector_store", check_vector_store)
 |---|---|
 | 1 ✅ | Config, logging, correlation ids, probes, app factory, tests |
 | 2 ✅ | Multi-stage Dockerfile, compose, non-root, read-only runtime |
-| 3 | CI pipeline with lint, type check, coverage gate, security scan |
-| 4 | OpenTelemetry, error handler, guardrail middleware slots |
+| 3 ✅ | CI pipeline with lint, type check, coverage gate, security scan |
+| 4 ✅ | OpenTelemetry tracing, RFC 9457 error contract, guardrail interfaces |
 | 5 | Evaluation harness interface + fixtures |
 
 ## Attribution
