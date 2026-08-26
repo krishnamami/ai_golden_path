@@ -51,11 +51,10 @@ def _install_record_factory() -> None:
 
     logging.setLogRecordFactory(factory)
 
+
 # Anything on a LogRecord that is not one of these was passed by the caller as
 # `extra=` and should be promoted to a top-level field in the JSON output.
-_LOGRECORD_BUILTINS = set(
-    logging.LogRecord("", 0, "", 0, "", None, None).__dict__
-) | {
+_LOGRECORD_BUILTINS = set(logging.LogRecord("", 0, "", 0, "", None, None).__dict__) | {
     "asctime",
     "message",
     "taskName",

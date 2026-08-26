@@ -22,9 +22,7 @@ def test_access_log_carries_correlation_id(client, caplog):
     records = [r for r in caplog.records if r.getMessage() == "request"]
     assert records, "middleware did not emit an access log line"
 
-    formatted = json.loads(
-        JsonFormatter("svc", "local", "0.0.0").format(records[0])
-    )
+    formatted = json.loads(JsonFormatter("svc", "local", "0.0.0").format(records[0]))
     assert formatted["correlation_id"] == "trace-me"
     assert formatted["http_status"] == 200
     assert formatted["http_path"] == "/health"
