@@ -81,8 +81,4 @@ register_readiness_check("vector_store", check_vector_store)
 | 4 | OpenTelemetry, error handler, guardrail middleware slots |
 | 5 | Evaluation harness interface + fixtures |
 
-## Attribution
 
-The original project layout and CI approach were studied from
-[sourangshupal/rag-qa-project](https://github.com/sourangshupal/rag-qa-project).
-This template was written from scratch; no code was copied.
